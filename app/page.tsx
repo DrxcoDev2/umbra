@@ -1,7 +1,7 @@
 
 import Header from "@/app/components/header"
 import Form from "@/app/components/form"
-import { redirect } from 'next/navigation';
+//import { redirect } from 'next/navigation';
 
 export default function Home() {
   return (
