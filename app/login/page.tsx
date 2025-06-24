@@ -23,7 +23,7 @@ export default function Login() {
     if (error) {
       setErrorMsg(error.message);
     } else {
-      router.push('/'); // Redirige a la p�gina principal o dashboard
+      router.push('/dashboard'); // Redirige a la p�gina principal o dashboard
     }
   };
 
