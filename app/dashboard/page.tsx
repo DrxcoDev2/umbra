@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
+import SlideBar from '@/app/dashboard/components/slidebar';
+import Feed from '@/app/dashboard/components/feed';
 
 
 export default function DashboardPage() {
@@ -16,5 +18,11 @@ export default function DashboardPage() {
     });
   }, []);
 
-  return <h1>Bienvenido al Dashboard</h1>;
+  return(
+    <div className="flex pl-10 space-x-[200px]">
+        <SlideBar></SlideBar>
+        <Feed></Feed>
+    </div>
+    
+  );
 }

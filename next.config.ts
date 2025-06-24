@@ -1,7 +1,8 @@
-import type { NextConfig } from "next";
+import { NextConfig } from 'next';
+import { createHeaders } from 'next-security';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+
 };
 
 export default nextConfig;
