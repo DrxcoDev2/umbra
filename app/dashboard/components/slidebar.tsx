@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function SlideBar() {
     return(
         <div className="max-w-[300px] flex justify-center ">

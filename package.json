@@ -10,10 +10,14 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
+    "accept-language": "^3.0.20",
+    "i18next": "^25.2.1",
     "next": "15.3.4",
+    "next-i18next": "^15.4.2",
     "next-security": "^1.1.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-i18next": "^15.5.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

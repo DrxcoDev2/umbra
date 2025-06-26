@@ -1,8 +1,8 @@
-import { NextConfig } from 'next';
-import { createHeaders } from 'next-security';
+import type { NextConfig } from 'next';
+import nextI18NextConfig from './next-i18next.config';
 
-const nextConfig: NextConfig = {
-
+const config: NextConfig = {
+  //...nextI18NextConfig,
 };
 
-export default nextConfig;
+export default config;
