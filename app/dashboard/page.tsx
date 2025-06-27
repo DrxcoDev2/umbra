@@ -81,7 +81,10 @@ export default function DashboardPage() {
   return (
     <div className="flex pl-10 space-x-[200px]">
       <SlideBar />
-      <Feed />
+      <div className="flex justify-center">
+        <Feed />
+      </div>
+
       <div className="mt-10">
         <Link
           href={`/dashboard/perfil/${profile.username}`}

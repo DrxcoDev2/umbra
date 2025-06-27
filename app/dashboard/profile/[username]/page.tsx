@@ -31,7 +31,6 @@ export default function Profile() {
   useEffect(() => {
     const fetchProfileAndPosts = async () => {
       if (!usernameParam) {
-        console.warn('No se recibi� username en params');
         setLoading(false);
         setProfile(null);
         setPosts([]);
@@ -40,7 +39,6 @@ export default function Profile() {
 
       const usernameTrimmed = usernameParam.trim();
 
-      // 1. Buscar perfil por username (case-insensitive)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, username, avatar_url, banner_url')
@@ -48,7 +46,6 @@ export default function Profile() {
         .maybeSingle();
 
       if (profileError || !profileData) {
-        console.error('Error al consultar perfil:', profileError);
         setProfile(null);
         setPosts([]);
         setLoading(false);
@@ -57,35 +54,26 @@ export default function Profile() {
 
       setProfile(profileData);
 
-      // Dentro de fetchProfileAndPosts, tras obtener profileData...
-
       const { data: postsData, error: postsError } = await supabase
-      .from('posts')
-      .select('*')
-      .eq('username', profileData.username)  // Cambia 'username' si tu columna tiene otro nombre
-      .order('created_at', { ascending: false });
+        .from('posts')
+        .select('*')
+        .eq('username', profileData.username)
+        .order('created_at', { ascending: false });
 
-      if (postsError) {
-      console.error('Error al consultar publicaciones:', postsError.message, postsError.code);
-      setPosts([]);
-      } else {
-      setPosts(postsData || []);
-      }
-
-
+      setPosts(postsError ? [] : postsData || []);
       setLoading(false);
     };
 
     fetchProfileAndPosts();
   }, [usernameParam]);
 
-  if (loading) return <div>Cargando perfil...</div>;
-  if (!profile) return <div>Perfil no encontrado</div>;
+  if (loading) return <div className="p-4 text-center">Cargando perfil...</div>;
+  if (!profile) return <div className="p-4 text-center">Perfil no encontrado</div>;
 
   return (
-    <div>
+    <div className="w-full max-w-4xl mx-auto px-4 py-6">
       {/* Banner */}
-      <div className="w-full h-[300px] bg-gray-300 relative overflow-hidden">
+      <div className="w-full h-48 sm:h-64 bg-gray-300 rounded-lg overflow-hidden">
         {profile.banner_url ? (
           <img src={profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
         ) : (
@@ -93,40 +81,40 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Avatar */}
-      <div className="w-[200px] h-[200px] rounded-full overflow-hidden border-4 border-white relative -mt-[100px] ml-[100px] bg-gray-500">
-        {profile.avatar_url ? (
-          <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-white">Sin avatar</div>
-        )}
-      </div>
-
-      {/* Info y uploader */}
-      <div className="ml-[400px] -mt-[50px] space-y-4">
-        <span className="text-2xl font-semibold">Usuario</span>
-        <h1 className="text-lg">{profile.username}</h1>
-        <ProfileImageUploader />
+      {/* Avatar e Info */}
+      <div className="flex flex-col sm:flex-row items-center sm:items-start mt-[-4rem] sm:mt-[-6rem] sm:space-x-6">
+        <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white bg-gray-500 overflow-hidden -mt-10">
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-white">Sin avatar</div>
+          )}
+        </div>
+        <div className="mt-4 sm:mt-0 text-center sm:text-left">
+          <h1 className="text-2xl font-semibold">{profile.username}</h1>
+          <div className="mt-2">
+            <ProfileImageUploader />
+          </div>
+        </div>
       </div>
 
       {/* Publicaciones */}
-      <div className="mt-10 ml-[400px] max-w-[600px]">
-        <h2 className="text-xl font-semibold mb-4">Publicaciones</h2>
+      <div className="mt-10">
+        <h2 className="text-xl font-bold mb-4">Publicaciones</h2>
         {posts.length === 0 ? (
           <p>Este usuario no ha hecho ninguna publicaci�n.</p>
         ) : (
           posts.map((post) => (
-            <div
-              key={post.id}
-              className="mb-4 p-4 bg-neutral-800 rounded-md text-white"
-            >
-              <p>{post.content}</p>
-              <div className="mt-2 text-sm text-gray-400 flex justify-between">
-                <span>Likes: {post.likes ?? 0}</span>
-                <span>Comentarios: {post.comments ?? 0}</span>
-                <span>Vistas: {post.views ?? 0}</span>
-                <span>Compartidos: {post.shares ?? 0}</span>
-                <span>{new Date(post.created_at).toLocaleDateString()}</span>
+            <div key={post.id} className="mb-4 p-4 bg-neutral-800 rounded-md text-white">
+              <p className="whitespace-pre-wrap">{post.content}</p>
+              <div className="mt-3 text-sm text-gray-400 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <span>\u2764\ufe0f Likes: {post.likes ?? 0}</span>
+                <span>\U0001f4ac Comentarios: {post.comments ?? 0}</span>
+                <span>\U0001f441\ufe0f Vistas: {post.views ?? 0}</span>
+                <span>\U0001f501 Compartidos: {post.shares ?? 0}</span>
+                <span className="col-span-2 sm:col-span-1">
+                  \U0001f552 {new Date(post.created_at).toLocaleDateString()}
+                </span>
               </div>
             </div>
           ))
