@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabaseClient';
+import { useParams } from 'next/navigation';
 import ProfileImageUploader from './ProfileImageUploader';
 
 interface ProfileData {
@@ -11,64 +12,49 @@ interface ProfileData {
 }
 
 export default function Profile() {
-  const [profile, setProfile] = useState<ProfileData>({
-    username: null,
-    avatar_url: null,
-    banner_url: null,
-  });
+  const { username: usernameParam } = useParams() as { username: string };
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
-      // Obtener usuario actual
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) {
-        console.error('Error obteniendo usuario:', userError);
+      if (!usernameParam) {
+        console.warn('No se recibió username en params');
         setLoading(false);
-        return;
-      }
-      if (!user) {
-        setLoading(false);
+        setProfile(null);
         return;
       }
 
-      // Consultar perfil en tabla 'profiles'
+      const usernameTrimmed = usernameParam.trim();
+
+      console.log('Buscando perfil para username:', usernameTrimmed);
+
+      // Busca el username exacto ignorando mayúsculas/minúsculas
       const { data, error } = await supabase
         .from('profiles')
         .select('username, avatar_url, banner_url')
-        .eq('id', user.id)
-        .single();
+        .ilike('username', usernameTrimmed)  // Exacto case-insensitive
+        .maybeSingle();
 
       if (error) {
-        console.error('Error obteniendo perfil:', error);
-      } else if (data) {
-        setProfile({
-          username: data.username || user.user_metadata?.username || user.email,
-          avatar_url: data.avatar_url,
-          banner_url: data.banner_url,
-        });
+        console.error('Error al consultar perfil:', error);
+        setProfile(null);
+      } else if (!data) {
+        console.warn('Perfil no encontrado para username:', usernameTrimmed);
+        setProfile(null);
       } else {
-        // Si no hay perfil, poner username básico
-        setProfile({
-          username: user.user_metadata?.username || user.email,
-          avatar_url: null,
-          banner_url: null,
-        });
+        console.log('Perfil encontrado:', data);
+        setProfile(data);
       }
 
       setLoading(false);
     };
 
     fetchProfile();
-  }, []);
+  }, [usernameParam]);
 
-  if (loading) {
-    return <div>Cargando perfil...</div>;
-  }
+  if (loading) return <div>Cargando perfil...</div>;
+  if (!profile) return <div>Perfil no encontrado</div>;
 
   return (
     <div>
