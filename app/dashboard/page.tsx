@@ -30,36 +30,41 @@ export default function DashboardPage() {
 
       console.log('User ID:', userId);
 
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('username')
         .eq('id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // Ignora error 404 si no existe
+      if (error && error.code !== 'PGRST116') {
         console.error('Error consultando perfil:', error);
         setLoading(false);
         return;
       }
 
+      let finalUsername = data?.username;
+
       if (!data) {
-        // No hay perfil, lo creamos autom�ticamente
+        // Si no hay perfil, lo creamos autom�ticamente
         const { error: insertError } = await supabase.from('profiles').insert([
           {
             id: userId,
             username: defaultUsername,
           },
         ]);
+
         if (insertError) {
           console.error('Error creando perfil:', insertError);
           setLoading(false);
           return;
         }
-        data = { username: defaultUsername };
+
+        finalUsername = defaultUsername;
       }
 
-      setProfile(data);
+      setProfile({ username: finalUsername! });
       setLoading(false);
+
     };
 
     getProfile();
