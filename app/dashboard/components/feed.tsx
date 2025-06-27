@@ -50,7 +50,7 @@ export default function Feed() {
 
   return (
     <div className="max-w-[600px] h-auto pt-20">
-      <h1 className="text-4xl">Feed</h1>
+      <h1 className="text-4xl flex justify-center">Feed</h1>
       <div
         className="pl-8 pt-10 space-y-6"
         style={{
