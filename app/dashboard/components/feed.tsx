@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabaseClient';
+import Link from 'next/link';
 
 interface Post {
   id: number;
@@ -28,31 +29,54 @@ export default function Feed() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      const { data, error } = await supabase
+
+    const fetchPostsWithCommentCounts = async () => {
+      const { data: postsData, error: postsError } = await supabase
         .from('posts')
         .select('*');
 
-      if (error) {
-        console.error('Error al cargar publicaciones:', error);
+      if (postsError || !postsData) {
+        console.error('Error al cargar publicaciones:', postsError);
         setPosts([]);
-      } else {
-        // Mezclar posts antes de asignar
-        setPosts(shuffleArray(data || []));
+        setLoading(false);
+        return;
       }
+
+      // Obtener conteo de comentarios por post
+      const { data: commentsData, error: commentsError } = await supabase
+        .from('comments')
+        .select('post_id');
+
+      if (commentsError || !commentsData) {
+        console.error('Error al cargar comentarios:', commentsError);
+        setPosts(postsData); // mostrar sin contar comentarios
+        setLoading(false);
+        return;
+      }
+
+      const commentCountMap = commentsData.reduce((acc: Record<number, number>, comment) => {
+        acc[comment.post_id] = (acc[comment.post_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      const postsWithCommentCounts = postsData.map((post) => ({
+        ...post,
+        comments: commentCountMap[post.id] || 0,
+      }));
+
+      setPosts(shuffleArray(postsWithCommentCounts));
       setLoading(false);
     };
 
-    fetchPosts();
+    fetchPostsWithCommentCounts();
   }, []);
-
   if (loading) return <div>Cargando publicaciones...</div>;
 
   return (
-    <div className="max-w-[600px] h-auto pt-20">
-      <h1 className="text-4xl flex justify-center">Feed</h1>
+    <div className="max-w-[600px] h-auto py-5 px-4">
+      <h1 className="text-4xl flex justify-center pb-5">Feed</h1>
       <div
-        className="pl-8 pt-10 space-y-6"
+        className="pl-8 pr-8 pt-10 space-y-6"
         style={{
           maxHeight: '600px',
           overflowY: 'auto',
@@ -88,7 +112,7 @@ export default function Feed() {
                 </svg>
                 {post.likes}
               </span>
-              <span className="flex items-center space-x-2">
+              <Link href={`/comments/${post.id}`} className="flex items-center space-x-2">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="1em"
@@ -105,7 +129,7 @@ export default function Feed() {
                   />
                 </svg>
                 {post.comments}
-              </span>
+              </Link>
               <span className="flex items-center space-x-2">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

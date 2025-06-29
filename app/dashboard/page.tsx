@@ -123,7 +123,7 @@ export default function DashboardPage() {
       )}
 
       {/* Contenido principal */}
-      <div className="flex-1 flex flex-col items-center px-4 pt-6 pb-12">
+      <div className="flex-1 flex flex-col items-center pt-6 pb-12 md:-pl-[200px]">
         <Feed />
         <Link
           href={`/dashboard/perfil/${profile.username}`}
