@@ -4,12 +4,17 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabaseClient';
 
+interface Profile {
+  username?: string | null;
+}
+
 interface Comment {
   id: string;
   content: string;
   created_at: string;
   user_id: string;
-  username?: string;
+  profiles?: Profile;
+  username?: string; // extra para mapear username m�s f�cil
 }
 
 export default function CommentsPage() {
@@ -22,19 +27,21 @@ export default function CommentsPage() {
 
   const fetchComments = async () => {
     const { data, error } = await supabase
-      .from('comments')
+      .from<Comment>('comments')
       .select('id, content, created_at, user_id, profiles(username)')
       .eq('post_id', postId)
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error al obtener comentarios:', error.message, error.code);
+      setLoading(false);
       return;
     }
 
-    const formatted = (data ?? []).map((c: any) => ({
+    // Mapear username directo
+    const formatted = (data ?? []).map((c) => ({
       ...c,
-      username: c.profiles?.username || 'Desconocido',
+      username: c.profiles?.username ?? 'Desconocido',
     }));
 
     setComments(formatted);
@@ -42,7 +49,10 @@ export default function CommentsPage() {
   };
 
   useEffect(() => {
-    if (postId) fetchComments();
+    if (postId) {
+      setLoading(true);
+      fetchComments();
+    }
   }, [postId]);
 
   const handleSubmit = async () => {
@@ -77,14 +87,12 @@ export default function CommentsPage() {
         ) : (
           comments.map((c) => (
             <div key={c.id} className="p-3 bg-neutral-800 text-white rounded">
-              <div className="flex items-center">
+              <div className="flex items-center justify-between">
                 <span className="text-sm font-bold">@{c.username}</span>
-                <div className="grid grid-flow-col justify-items-end-safe">
-                  <button type="button" className="p-2 rounded-lg text-sm bg-red-500">Delete</button>
-                </div>
-                
+                <button type="button" className="p-2 rounded-lg text-sm bg-red-500 hover:bg-red-600 transition">
+                  Delete
+                </button>
               </div>
-              
               <p className="mt-1">{c.content}</p>
               <span className="text-xs text-gray-400">
                 {new Date(c.created_at).toLocaleString()}
@@ -100,10 +108,12 @@ export default function CommentsPage() {
           onChange={(e) => setNewComment(e.target.value)}
           className="w-full p-2 rounded bg-neutral-900 text-white"
           placeholder="Escribe tu comentario..."
+          rows={4}
         />
         <button
           onClick={handleSubmit}
           className="self-end bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+          disabled={newComment.trim() === ''}
         >
           Comentar
         </button>
