@@ -77,7 +77,14 @@ export default function CommentsPage() {
         ) : (
           comments.map((c) => (
             <div key={c.id} className="p-3 bg-neutral-800 text-white rounded">
-              <span className="text-sm font-bold">@{c.username}</span>
+              <div className="flex items-center">
+                <span className="text-sm font-bold">@{c.username}</span>
+                <div className="grid grid-flow-col justify-items-end-safe">
+                  <button type="button" className="p-2 rounded-lg text-sm bg-red-500">Delete</button>
+                </div>
+                
+              </div>
+              
               <p className="mt-1">{c.content}</p>
               <span className="text-xs text-gray-400">
                 {new Date(c.created_at).toLocaleString()}
