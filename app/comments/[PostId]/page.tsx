@@ -27,10 +27,11 @@ export default function CommentsPage() {
 
   const fetchComments = async () => {
     const { data, error } = await supabase
-      .from<Comment>('comments')
+      .from('comments')
       .select('id, content, created_at, user_id, profiles(username)')
       .eq('post_id', postId)
       .order('created_at', { ascending: false });
+
 
     if (error) {
       console.error('Error al obtener comentarios:', error.message, error.code);
@@ -39,10 +40,11 @@ export default function CommentsPage() {
     }
 
     // Mapear username directo
-    const formatted = (data ?? []).map((c) => ({
+    const formatted = (data as Comment[] ?? []).map((c) => ({
       ...c,
       username: c.profiles?.username ?? 'Desconocido',
     }));
+    
 
     setComments(formatted);
     setLoading(false);
