@@ -1,7 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
-const supabaseUrl = "https://clzltnmucgkzupjgewut.supabase.co";
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsemx0bm11Y2drenVwamdld3V0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA2ODczODMsImV4cCI6MjA2NjI2MzM4M30.LuM3daYe0UdGhfJsIkXVb-Gd8KzCYTxqnEl_hRl9lLE";
+dotenv.config();
+
+// Accede a las variables usando el nombre EXACTO (may�sculas y guiones bajos)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Opcional: agregar validaci�n para evitar que sean undefined
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Faltan variables de entorno NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY');
+
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
