@@ -5,7 +5,7 @@ import { supabase } from '@/app/lib/supabaseClient';
 import Link from 'next/link';
 
 interface Post {
-  id: number;
+  id: string;
   username: string;
   content: string;
   created_at: string;
@@ -13,6 +13,7 @@ interface Post {
   comments: number;
   views: number;
   shares: number;
+  likedByMe?: boolean;
 }
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -27,67 +28,109 @@ function shuffleArray<T>(array: T[]): T[] {
 export default function Feed() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchUserAndPosts = async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    const fetchPostsWithCommentCounts = async () => {
+      if (userError || !user) {
+        setLoading(false);
+        return;
+      }
+
+      setUserId(user.id);
+
       const { data: postsData, error: postsError } = await supabase
         .from('posts')
         .select('*');
 
       if (postsError || !postsData) {
         console.error('Error al cargar publicaciones:', postsError);
-        setPosts([]);
         setLoading(false);
         return;
       }
 
-      // Obtener conteo de comentarios por post
-      const { data: commentsData, error: commentsError } = await supabase
+      const { data: commentsData } = await supabase
         .from('comments')
         .select('post_id');
 
-      if (commentsError || !commentsData) {
-        console.error('Error al cargar comentarios:', commentsError);
-        setPosts(postsData); // mostrar sin contar comentarios
-        setLoading(false);
-        return;
-      }
-
-      const commentCountMap = commentsData.reduce((acc: Record<number, number>, comment) => {
+      const commentCountMap = commentsData?.reduce((acc: Record<string, number>, comment) => {
         acc[comment.post_id] = (acc[comment.post_id] || 0) + 1;
         return acc;
-      }, {});
+      }, {}) || {};
 
-      const postsWithCommentCounts = postsData.map((post) => ({
+      const { data: likesData } = await supabase
+        .from('likes')
+        .select('post_id, user_id');
+
+      const likeCountMap: Record<string, number> = {};
+      const likedPostsSet = new Set<string>();
+
+      likesData?.forEach((like) => {
+        likeCountMap[like.post_id] = (likeCountMap[like.post_id] || 0) + 1;
+        if (like.user_id === user.id) {
+          likedPostsSet.add(like.post_id);
+        }
+      });
+
+      const finalPosts = postsData.map((post) => ({
         ...post,
         comments: commentCountMap[post.id] || 0,
+        likes: likeCountMap[post.id] || 0,
+        likedByMe: likedPostsSet.has(post.id),
       }));
 
-      setPosts(shuffleArray(postsWithCommentCounts));
+      setPosts(shuffleArray(finalPosts));
       setLoading(false);
     };
 
-    fetchPostsWithCommentCounts();
+    fetchUserAndPosts();
   }, []);
+
+  const toggleLike = async (postId: string) => {
+    if (!userId) return;
+
+    const liked = posts.find((p) => p.id === postId)?.likedByMe;
+
+    if (liked) {
+      await supabase
+        .from('likes')
+        .delete()
+        .eq('post_id', postId)
+        .eq('user_id', userId);
+    } else {
+      await supabase.from('likes').insert({
+        post_id: postId,
+        user_id: userId,
+      });
+    }
+
+    setPosts((prev) =>
+      prev.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              likes: post.likes + (liked ? -1 : 1),
+              likedByMe: !liked,
+            }
+          : post
+      )
+    );
+  };
+
   if (loading) return <div>Cargando publicaciones...</div>;
 
   return (
     <div className="max-w-[600px] h-auto py-5 px-4">
       <h1 className="text-4xl flex justify-center pb-5">Feed</h1>
-      <div
-        className="pl-8 pr-8 pt-10 space-y-6"
-        style={{
-          maxHeight: '600px',
-          overflowY: 'auto',
-        }}
-      >
-        {posts.length === 0 && <p>No hay publicaciones aún.</p>}
+      <div className="pl-8 pr-8 pt-10 space-y-6" style={{ maxHeight: '600px', overflowY: 'auto' }}>
+        {posts.length === 0 && <p>No hay publicaciones a�n.</p>}
         {posts.map((post) => (
-          <div
-            key={post.id}
-            className="p-4 w-[400px] h-[400px] border rounded-md bg-neutral-800 text-white flex flex-col justify-between"
-          >
+          <div key={post.id} className="p-4 w-[400px] h-[400px] border rounded-md bg-neutral-800 text-white flex flex-col justify-between">
             <div>
               <div className="font-bold">@{post.username}</div>
               <div className="mt-2 whitespace-pre-wrap">{post.content}</div>
@@ -98,45 +141,25 @@ export default function Feed() {
             </div>
 
             <div className="mt-2 flex justify-between text-sm text-gray-300">
-              <span className="flex items-center space-x-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="1em"
-                  height="1em"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill="currentColor"
-                    d="m12 21l-1.45-1.3q-2.525-2.275-4.175-3.925T3.75 12.812T2.388 10.4T2 8.15Q2 5.8 3.575 4.225T7.5 2.65q1.3 0 2.475.55T12 4.75q.85-1 2.025-1.55t2.475-.55q2.35 0 3.925 1.575T22 8.15q0 1.15-.387 2.25t-1.363 2.412t-2.625 2.963T13.45 19.7z"
-                  />
+            <button
+                onClick={() => toggleLike(post.id)}
+                className={`flex items-center space-x-2 ${post.likedByMe ? 'text-red-400' : ''}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="m12 21l-1.45-1.3q-2.525-2.275-4.175-3.925T3.75 12.812T2.388 10.4T2 8.15Q2 5.8 3.575 4.225T7.5 2.65q1.3 0 2.475.55T12 4.75q.85-1 2.025-1.55t2.475-.55q2.35 0 3.925 1.575T22 8.15q0 1.15-.387 2.25t-1.363 2.412t-2.625 2.963T13.45 19.7z" />
                 </svg>
-                {post.likes}
-              </span>
-              <Link href={`/comments/${post.id}`} className="flex items-center space-x-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="1em"
-                  height="1em"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"
-                  />
+                <span>{post.likes}</span>
+              </button>
+
+              <Link href={`/comments/${post.id}`} className="flex items-center space-x-2 hover:text-blue-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+                  <path fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z" />
                 </svg>
-                {post.comments}
+                <span>{post.comments}</span>
               </Link>
+
               <span className="flex items-center space-x-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="1em"
-                  height="1em"
-                  viewBox="0 0 16 16"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 16 16">
                   <path
                     fill="currentColor"
                     fillRule="evenodd"
@@ -146,20 +169,17 @@ export default function Feed() {
                 </svg>
                 {post.views}
               </span>
+
               <span className="flex items-center space-x-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="1em"
-                  height="1em"
-                  viewBox="-2 -2 24 24"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="-2 -2 24 24">
                   <path
                     fill="currentColor"
                     d="M7.928 9.24a4 4 0 0 1-.026 1.644l5.04 2.537a4 4 0 1 1-.867 1.803l-5.09-2.562a4 4 0 1 1 .083-5.228l5.036-2.522a4 4 0 1 1 .929 1.772z"
                   />
-                </svg>{' '}
+                </svg>
                 {post.shares}
               </span>
+
             </div>
           </div>
         ))}
